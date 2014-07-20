@@ -24,6 +24,7 @@ import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.google.inject.Inject;
+
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.Invalidation;
 import org.rstudio.core.client.Rectangle;
@@ -48,7 +49,9 @@ import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEdito
 import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEditorLineWithCursorPosition;
 import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEditorSelection;
 import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEditorUtil;
+import org.rstudio.studio.client.workbench.views.source.editors.text.DocDisplay;
 import org.rstudio.studio.client.workbench.views.source.editors.text.NavigableSourceEditor;
+import org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget;
 import org.rstudio.studio.client.workbench.views.source.events.CodeBrowserNavigationEvent;
 import org.rstudio.studio.client.workbench.views.source.model.RnwCompletionContext;
 import org.rstudio.studio.client.workbench.views.source.model.SourcePosition;
@@ -85,7 +88,8 @@ public class RCompletionManager implements CompletionManager
                              CompletionPopupDisplay popup,
                              CodeToolsServerOperations server,
                              InitCompletionFilter initFilter,
-                             RnwCompletionContext rnwContext)
+                             RnwCompletionContext rnwContext,
+                             DocDisplay docDisplay)
    {
       RStudioGinjector.INSTANCE.injectMembers(this);
       
@@ -96,6 +100,7 @@ public class RCompletionManager implements CompletionManager
       requester_ = new CompletionRequester(server_, rnwContext);
       initFilter_ = initFilter ;
       rnwContext_ = rnwContext;
+      docDisplay_ = docDisplay;
       
       input_.addBlurHandler(new BlurHandler() {
          public void onBlur(BlurEvent event)
@@ -501,7 +506,7 @@ public class RCompletionManager implements CompletionManager
       
       invalidatePendingRequests(flushCache) ;
 
-      String line = input_.getText() ;
+      String line = getTextBackwardsToFunctionCall(50);
       if (!input_.hasSelection())
       {
          Debug.log("Cursor wasn't in input box or was in subelement");
@@ -525,12 +530,74 @@ public class RCompletionManager implements CompletionManager
       context_ = new CompletionRequestContext(invalidation_.getInvalidationToken(),
                                               selection,
                                               canAutoAccept) ;
+      
       requester_.getCompletions(line,
-                                selection.getStart().getPosition(),
+                                line.length(),
                                 implicit,
                                 context_);
 
       return true ;
+   }
+
+   private String getTextBackwardsToFunctionCall(int lookbackLimit)
+   {
+      
+      int row = input_.getCursorPosition().getRow();
+      int col = input_.getSelection().getStart().getPosition();
+      String currentLine = input_.getText().substring(0, col);
+      
+      // escape early for Roxygen
+      if (currentLine.matches("^\\s*#+'.*$"))
+      {
+         return currentLine;
+      }
+      
+      currentLine = StringUtil.stripQuotedElementsAndComments(currentLine);
+      String result = currentLine;
+      
+      // keep track of the balance of '{', '}' so we can skip over
+      // blocks if necessary
+      int braceBalance = StringUtil.countMatches(currentLine, "{") -
+            StringUtil.countMatches(currentLine, "}");
+      
+      // when we have counted more '(' than ')', we can break
+      int parenBalance = StringUtil.countMatches(currentLine, "(") -
+            StringUtil.countMatches(currentLine, ")");
+      
+      if (parenBalance > 0)
+      {
+         return result;
+      }
+      
+      for (int i = 0; i < lookbackLimit; i++)
+      {
+         row--;
+         if (row < 0)
+         {
+            break;
+         }
+         
+         currentLine = StringUtil.stripQuotedElementsAndComments(
+               docDisplay_.getLine(row));
+         result = currentLine + result;
+         
+         braceBalance += StringUtil.countMatches(currentLine, "{") -
+               StringUtil.countMatches(currentLine, "}");
+         parenBalance += StringUtil.countMatches(currentLine, "(") -
+               StringUtil.countMatches(currentLine, ")");
+         
+         if (braceBalance < 0)
+         {
+            continue;
+         }
+         
+         if (parenBalance > 0)
+         {
+            break;
+         }
+         
+      }
+      return result;
    }
 
    /**
@@ -715,6 +782,8 @@ public class RCompletionManager implements CompletionManager
    // click on it to scroll.
    private boolean ignoreNextInputBlur_ = false;
    private String token_ ;
+   
+   private final DocDisplay docDisplay_;
 
    private final Invalidation invalidation_ = new Invalidation();
    private CompletionRequestContext context_ ;
