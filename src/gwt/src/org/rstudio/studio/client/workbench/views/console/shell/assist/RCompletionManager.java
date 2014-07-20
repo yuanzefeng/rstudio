@@ -162,7 +162,7 @@ public class RCompletionManager implements CompletionManager
    public void codeCompletion()
    {
       if (initFilter_ == null || initFilter_.shouldComplete(null))
-         beginSuggest(true, false);
+         beginSuggest(true, false, false);
    }
    
    public void goToHelp()
@@ -269,12 +269,16 @@ public class RCompletionManager implements CompletionManager
 
       if (!popup_.isShowing())
       {
-         if ((event.getKeyCode() == KeyCodes.KEY_TAB && modifier == KeyboardShortcut.NONE)
-               || (event.getKeyCode() == ' ' && modifier == KeyboardShortcut.CTRL))
+         boolean isTab = event.getKeyCode() == KeyCodes.KEY_TAB &&
+               modifier == KeyboardShortcut.NONE;
+         boolean isCtrlSpace = event.getKeyCode() == KeyCodes.KEY_SPACE &&
+               modifier == KeyboardShortcut.CTRL;
+               
+         if (isTab || isCtrlSpace)
          {
             if (initFilter_ == null || initFilter_.shouldComplete(event))
             {
-               return beginSuggest(true, false) ;
+               return beginSuggest(true, false, isCtrlSpace) ;
             }
          }
          else if (event.getKeyCode() == 112 // F1
@@ -370,7 +374,7 @@ public class RCompletionManager implements CompletionManager
                @Override
                public void execute()
                {
-                  beginSuggest(false, false) ;
+                  beginSuggest(false, false, false) ;
                }
             });
          }
@@ -384,7 +388,7 @@ public class RCompletionManager implements CompletionManager
                @Override
                public void execute()
                {
-                  beginSuggest(true, true) ;
+                  beginSuggest(true, true, false) ;
                }
             });
          }
@@ -499,14 +503,23 @@ public class RCompletionManager implements CompletionManager
    /**
     * If false, the suggest operation was aborted
     */
-   private boolean beginSuggest(boolean flushCache, boolean implicit)
+   private boolean beginSuggest(boolean flushCache, boolean implicit, boolean multiline)
    {
       if (!input_.isSelectionCollapsed())
          return false ;
       
       invalidatePendingRequests(flushCache) ;
 
+      // only perform multi-line autocompletion when multiline is true
+      int firstCol = input_.getSelection().getStart().getPosition();
+      String firstLine = StringUtil.stripQuotedElementsAndComments(
+            input_.getText().substring(0, firstCol));
       String line = getTextBackwardsToFunctionCall(50);
+      if (!multiline && !firstLine.equals(line))
+      {
+         return false;
+      }
+      
       if (!input_.hasSelection())
       {
          Debug.log("Cursor wasn't in input box or was in subelement");
@@ -733,7 +746,7 @@ public class RCompletionManager implements CompletionManager
                @Override
                public void execute()
                {
-                  beginSuggest(true, true);
+                  beginSuggest(true, true, false);
                }
             });
          }
