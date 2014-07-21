@@ -503,19 +503,32 @@ public class RCompletionManager implements CompletionManager
    /**
     * If false, the suggest operation was aborted
     */
-   private boolean beginSuggest(boolean flushCache, boolean implicit, boolean multiline)
+   private boolean beginSuggest(boolean flushCache, boolean implicit,
+         boolean tryMultiLineCompletion)
    {
       if (!input_.isSelectionCollapsed())
          return false ;
       
-      invalidatePendingRequests(flushCache) ;
-
-      // only perform multi-line autocompletion when multiline is true
-      int firstCol = input_.getSelection().getStart().getPosition();
-      String firstLine = StringUtil.stripQuotedElementsAndComments(
-            input_.getText().substring(0, firstCol));
+      invalidatePendingRequests(flushCache);
+      
+      InputEditorSelection selection = input_.getSelection() ;
+      if (selection == null)
+         return false;
+      
+      int firstCol = selection.getStart().getPosition();
+      String firstLine = input_.getText().substring(0, firstCol);
+      
+      // don't auto-complete at the start of comments
+      if (firstLine.matches(".*#+\\s*$"))
+      {
+         return false;
+      }
+      
       String line = getTextBackwardsToFunctionCall(50);
-      if (!multiline && !firstLine.equals(line))
+      
+      // if we didn't want multi-line completion and we were forced
+      // to look backwards to form context for the completion, then bail
+      if (!tryMultiLineCompletion && !firstLine.equals(line))
       {
          return false;
       }
@@ -525,9 +538,6 @@ public class RCompletionManager implements CompletionManager
          Debug.log("Cursor wasn't in input box or was in subelement");
          return false ;
       }
-      InputEditorSelection selection = input_.getSelection() ;
-      if (selection == null)
-         return false;
 
       String linePart = line.substring(0, selection.getStart().getPosition());
 
@@ -557,16 +567,21 @@ public class RCompletionManager implements CompletionManager
       
       int row = input_.getCursorPosition().getRow();
       int col = input_.getSelection().getStart().getPosition();
-      String currentLine = input_.getText().substring(0, col);
+      String result = input_.getText().substring(0, col);
       
       // escape early for Roxygen
-      if (currentLine.matches("^\\s*#+'.*$"))
+      if (result.matches("\\s*#+'.*"))
       {
-         return currentLine;
+         return result;
       }
       
-      currentLine = StringUtil.stripQuotedElementsAndComments(currentLine);
-      String result = currentLine;
+      // if we end with a $, return
+      if (result.endsWith("$"))
+      {
+         return result;
+      }
+      
+      String currentLine = result;
       
       // keep track of the balance of '{', '}' so we can skip over
       // blocks if necessary
