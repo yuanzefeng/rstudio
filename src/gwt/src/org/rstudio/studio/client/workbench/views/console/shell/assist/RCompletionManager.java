@@ -515,8 +515,9 @@ public class RCompletionManager implements CompletionManager
       if (selection == null)
          return false;
       
-      int firstCol = selection.getStart().getPosition();
-      String firstLine = input_.getText().substring(0, firstCol);
+      int cursorCol = selection.getStart().getPosition();
+      int cursorRow = input_.getCurrentLineNum();
+      String firstLine = input_.getText().substring(0, cursorCol);
       
       // don't auto-complete at the start of comments
       if (firstLine.matches(".*#+\\s*$"))
@@ -524,7 +525,7 @@ public class RCompletionManager implements CompletionManager
          return false;
       }
       
-      String line = getTextBackwardsToFunctionCall(50);
+      String line = getAutocompletionContext(firstLine, cursorRow, 50);
       
       // if we didn't want multi-line completion and we were forced
       // to look backwards to form context for the completion, then bail
@@ -562,25 +563,19 @@ public class RCompletionManager implements CompletionManager
       return true ;
    }
 
-   private String getTextBackwardsToFunctionCall(int lookbackLimit)
+   private String getAutocompletionContext(String firstLine,
+         int row, int lookbackLimit)
    {
       
-      int row = input_.getCursorPosition().getRow();
-      int col = input_.getSelection().getStart().getPosition();
-      String result = input_.getText().substring(0, col);
-      
-      // escape early for Roxygen
-      if (result.matches("\\s*#+'.*"))
+      // early escaping rules: if we're in Roxygen, or we have text immediately
+      // preceding the cursor (as that signals we're completing a variable name)
+      if (firstLine.matches("\\s*#+'.*") ||
+          firstLine.matches(".*[a-zA-Z0-9._$@]$"))
       {
-         return result;
+         return firstLine;
       }
       
-      // if we end with a $, return
-      if (result.endsWith("$"))
-      {
-         return result;
-      }
-      
+      String result = firstLine;
       String currentLine = result;
       
       // keep track of the balance of '{', '}' so we can skip over
