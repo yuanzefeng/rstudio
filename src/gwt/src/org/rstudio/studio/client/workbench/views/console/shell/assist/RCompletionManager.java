@@ -516,7 +516,7 @@ public class RCompletionManager implements CompletionManager
          return false;
       
       int cursorCol = selection.getStart().getPosition();
-      int cursorRow = input_.getCurrentLineNum();
+      int cursorRow = input_.getCursorPosition().getRow();
       String firstLine = input_.getText().substring(0, cursorCol);
       
       // don't auto-complete at the start of comments
