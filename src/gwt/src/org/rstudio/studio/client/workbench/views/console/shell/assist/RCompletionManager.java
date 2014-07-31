@@ -762,8 +762,29 @@ public class RCompletionManager implements CompletionManager
          }
       }
 
-      private void applyValue(final String value)
+      private void applyValue(final String value_)
       {
+         
+         String value = value_;
+         
+         // If the autocompletion is inserting something following an
+         // @ or a $, e.g. for completion of an entry in object 'x'
+         // named 'Some Value' as x$Some Value, surround it with
+         // "`" -- do this for all names with non-alphanumeric elements
+         if (value.matches("[a-zA-Z_.][a-zA-Z0-9_.]*\\$.*")) {
+            int dollarInd = value.indexOf("$");
+            value = value.substring(0, dollarInd + 1) +
+                  StringUtil.toRSymbolName(
+                        value.substring(dollarInd + 1, value.length()));
+         }
+         
+         if (value.matches("[a-zA-Z_.][a-zA-Z0-9_.]*\\@.*")) {
+            int atInd = value.indexOf("@");
+            value = value.substring(0, atInd + 1) +
+                  StringUtil.toRSymbolName(
+                        value.substring(atInd + 1, value.length()));
+         }
+         
          // Move range to beginning of token
          input_.setFocus(true) ;
          input_.setSelection(new InputEditorSelection(
