@@ -568,8 +568,10 @@ public class RCompletionManager implements CompletionManager
       boolean inSingleQuotes = false;
       boolean inDoubleQuotes = false;
       boolean inQuotes = false;
+      
       char currentChar = '\0';
       char previousChar = '\0';
+      
       StringBuilder result = new StringBuilder();
       
       for (int i = 0; i < string.length(); i++)
@@ -582,12 +584,12 @@ public class RCompletionManager implements CompletionManager
             previousChar = string.charAt(i - 1);
          }
          
-         if (currentChar == '#' && !inSingleQuotes && !inDoubleQuotes)
+         if (currentChar == '#' && !inQuotes)
          {
             break;
          }
          
-         if (currentChar == '\'' && !inSingleQuotes)
+         if (currentChar == '\'' && !inQuotes)
          {
             inSingleQuotes = true;
             continue;
@@ -599,7 +601,7 @@ public class RCompletionManager implements CompletionManager
             continue;
          }
          
-         if (currentChar == '"' && !inDoubleQuotes)
+         if (currentChar == '"' && !inQuotes)
          {
             inDoubleQuotes = true;
             continue;
@@ -611,7 +613,7 @@ public class RCompletionManager implements CompletionManager
             continue;
          }
          
-         if (!inSingleQuotes && !inDoubleQuotes)
+         if (!inQuotes)
          {
             result.append(currentChar);
          }
@@ -638,7 +640,7 @@ public class RCompletionManager implements CompletionManager
          return firstLine;
       }
       
-      String result = firstLine;
+      String result = stripBalancedQuotesAndComments(firstLine);
       String currentLine = result;
       
       // keep track of the balance of '{', '}' so we can skip over
