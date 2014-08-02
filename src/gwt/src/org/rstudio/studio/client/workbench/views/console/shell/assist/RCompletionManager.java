@@ -562,6 +562,69 @@ public class RCompletionManager implements CompletionManager
 
       return true ;
    }
+   
+   public static String stripBalancedQuotesAndComments(String string)
+   {
+      boolean inSingleQuotes = false;
+      boolean inDoubleQuotes = false;
+      boolean inQuotes = false;
+      char currentChar = '\0';
+      char previousChar = '\0';
+      StringBuilder result = new StringBuilder();
+      
+      for (int i = 0; i < string.length(); i++)
+      {
+         currentChar = string.charAt(i);
+         inQuotes = inSingleQuotes || inDoubleQuotes;
+         
+         if (i > 0)
+         {
+            previousChar = string.charAt(i - 1);
+         }
+         
+         if (currentChar == '#' && !inSingleQuotes && !inDoubleQuotes)
+         {
+            break;
+         }
+         
+         if (currentChar == '\'' && !inSingleQuotes)
+         {
+            inSingleQuotes = true;
+            continue;
+         }
+         
+         if (currentChar == '\'' && previousChar != '\\' && inSingleQuotes)
+         {
+            inSingleQuotes = false;
+            continue;
+         }
+         
+         if (currentChar == '"' && !inDoubleQuotes)
+         {
+            inDoubleQuotes = true;
+            continue;
+         }
+         
+         if (currentChar == '"' && previousChar != '\\' && inDoubleQuotes)
+         {
+            inDoubleQuotes = false;
+            continue;
+         }
+         
+         if (!inSingleQuotes && !inDoubleQuotes)
+         {
+            result.append(currentChar);
+         }
+      }
+      
+      // only strip if we ended not in a string
+      if (!inQuotes) {
+         return result.toString();
+      } else {
+         return string;
+      }
+      
+   } 
 
    private String getAutocompletionContext(String firstLine,
          int row, int lookbackLimit)
@@ -600,7 +663,7 @@ public class RCompletionManager implements CompletionManager
             break;
          }
          
-         currentLine = StringUtil.stripQuotedElementsAndComments(
+         currentLine = stripBalancedQuotesAndComments(
                docDisplay_.getLine(row));
          result = currentLine + result;
          

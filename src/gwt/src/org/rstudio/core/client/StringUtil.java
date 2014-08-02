@@ -513,59 +513,6 @@ public class StringUtil
       return line.length() - line.replace(match, "").length();
    }
    
-   public static String stripQuotedElementsAndComments(String string)
-   {
-      boolean inSingleQuotes = false;
-      boolean inDoubleQuotes = false;
-      char currentChar = '\0';
-      char previousChar = '\0';
-      String result = "";
-      
-      for (int i = 0; i < string.length(); i++)
-      {
-         currentChar = string.charAt(i);
-         if (i > 0)
-         {
-            previousChar = string.charAt(i - 1);
-         }
-         
-         if (currentChar == '#' && !inSingleQuotes && !inDoubleQuotes)
-         {
-            break;
-         }
-         
-         if (currentChar == '\'' && !inSingleQuotes)
-         {
-            inSingleQuotes = true;
-            continue;
-         }
-         
-         if (currentChar == '\'' && previousChar != '\\' && inSingleQuotes)
-         {
-            inSingleQuotes = false;
-            continue;
-         }
-         
-         if (currentChar == '"' && !inDoubleQuotes)
-         {
-            inDoubleQuotes = true;
-            continue;
-         }
-         
-         if (currentChar == '"' && previousChar != '\\' && inDoubleQuotes)
-         {
-            inDoubleQuotes = false;
-            continue;
-         }
-         
-         if (!inSingleQuotes && !inDoubleQuotes)
-         {
-            result += currentChar;
-         }
-      }
-      return result;
-   }
-   
    private static final String[] LABELS = {
          "B",
          "KB",
