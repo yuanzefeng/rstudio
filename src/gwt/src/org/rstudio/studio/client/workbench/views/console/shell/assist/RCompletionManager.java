@@ -667,6 +667,7 @@ public class RCompletionManager implements CompletionManager
          
          currentLine = stripBalancedQuotesAndComments(
                docDisplay_.getLine(row));
+         
          result = currentLine + result;
          
          braceBalance += StringUtil.countMatches(currentLine, "{") -
@@ -826,6 +827,24 @@ public class RCompletionManager implements CompletionManager
             });
          }
       }
+      
+      // For input of the form 'something$foo' or 'something@bar', quote the
+      // element following '@' if it's a non-syntactic R symbol; otherwise
+      // return as is
+      private String maybeQuoteAfter(String string, char chr)
+      {
+         if (string.matches("[a-zA-Z_.][a-zA-Z0-9_.]*\\" + chr + ".*"))
+         {
+            int ind = string.indexOf(chr);
+            String before = string.substring(0, ind + 1);
+            String after = string.substring(ind + 1, string.length());
+            if (after.length() > 0)
+            {
+               return before + StringUtil.toRSymbolName(after);
+            }
+         }
+         return string;
+      }
 
       private void applyValue(final String value_)
       {
@@ -836,19 +855,8 @@ public class RCompletionManager implements CompletionManager
          // @ or a $, e.g. for completion of an entry in object 'x'
          // named 'Some Value' as x$Some Value, surround it with
          // "`" -- do this for all names with non-alphanumeric elements
-         if (value.matches("[a-zA-Z_.][a-zA-Z0-9_.]*\\$.*")) {
-            int dollarInd = value.indexOf("$");
-            value = value.substring(0, dollarInd + 1) +
-                  StringUtil.toRSymbolName(
-                        value.substring(dollarInd + 1, value.length()));
-         }
-         
-         if (value.matches("[a-zA-Z_.][a-zA-Z0-9_.]*\\@.*")) {
-            int atInd = value.indexOf("@");
-            value = value.substring(0, atInd + 1) +
-                  StringUtil.toRSymbolName(
-                        value.substring(atInd + 1, value.length()));
-         }
+         value = maybeQuoteAfter(value, '@');
+         value = maybeQuoteAfter(value, '$');
          
          // Move range to beginning of token
          input_.setFocus(true) ;
