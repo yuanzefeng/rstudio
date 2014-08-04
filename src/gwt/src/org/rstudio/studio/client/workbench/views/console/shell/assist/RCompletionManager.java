@@ -51,7 +51,6 @@ import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEdito
 import org.rstudio.studio.client.workbench.views.console.shell.editor.InputEditorUtil;
 import org.rstudio.studio.client.workbench.views.source.editors.text.DocDisplay;
 import org.rstudio.studio.client.workbench.views.source.editors.text.NavigableSourceEditor;
-import org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget;
 import org.rstudio.studio.client.workbench.views.source.events.CodeBrowserNavigationEvent;
 import org.rstudio.studio.client.workbench.views.source.model.RnwCompletionContext;
 import org.rstudio.studio.client.workbench.views.source.model.SourcePosition;
@@ -618,6 +617,8 @@ public class RCompletionManager implements CompletionManager
             result.append(currentChar);
          }
       }
+      
+      inQuotes = inSingleQuotes || inDoubleQuotes;
       
       // only strip if we ended not in a string
       if (!inQuotes) {
