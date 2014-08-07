@@ -68,10 +68,11 @@ define("mode/r", function(require, exports, module)
                "[": "]",
                '"': '"',
                "'": "'",
-               "{": "}"
+               "{": "}",
+               "`": "`"
             };
-      this.$reOpen = /^[(["'{]$/;
-      this.$reClose = /^[)\]"'}]$/;
+      this.$reOpen = /^[(["'`{]$/;
+      this.$reClose = /^[)\]"'`}]$/;
 
       this.getNextLineIndent = function(state, line, tab, tabSize, row)
       {
