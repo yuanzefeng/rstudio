@@ -528,7 +528,8 @@ public class RCompletionManager implements CompletionManager
       
       // if we didn't want multi-line completion and we were forced
       // to look backwards to form context for the completion, then bail
-      if (!tryMultiLineCompletion && !firstLine.equals(line))
+      if (!tryMultiLineCompletion &&
+            !stripBalancedQuotesAndComments(firstLine).equals(line))
       {
          return false;
       }
